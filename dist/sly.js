@@ -1,10 +1,3 @@
-/*!
- * sly 1.3.0 - 30th Nov 2014
- * https://github.com/darsain/sly
- *
- * Licensed under the MIT license.
- * http://opensource.org/licenses/MIT
- */
 ;(function ($, w, undefined) {
 	'use strict';
 
@@ -165,7 +158,7 @@
 		 *
 		 * @return {Void}
 		 */
-		function load() {
+		function load(init) {
 			if (!self.initialized) {
 				return;
 			}
@@ -337,7 +330,7 @@
 
 			// Activate requested position
 			if (itemNav) {
-				if (!self.initialized) {
+				if (!self.initialized || (init && (init===true))) {
 					activate(o.startAt);
 					self[centeredNav ? 'toCenter' : 'toStart'](o.startAt);
 				} else if (rel.activeItem >= items.length || lastItemsCount === 0 && items.length > 0) {
@@ -1872,7 +1865,7 @@
 			self.initialized = 1;
 
 			// Load
-			load();
+			load(true);
 
 			// Initiate automatic cycling
 			if (o.cycleBy && !parallax) {
