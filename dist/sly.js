@@ -331,12 +331,12 @@
 			// Activate requested position
 			if (itemNav) {
 				if (!self.initialized || (init && (init===true))) {
-					activate(o.startAt);
+					activate(o.startAt, {'source': 'init' });
 					self[centeredNav ? 'toCenter' : 'toStart'](o.startAt);
 				} else if (rel.activeItem >= items.length || lastItemsCount === 0 && items.length > 0) {
 					// Activate last item if previous active has been removed, or first item
 					// when there were no items before, and new got appended.
-					activate(rel.activeItem >= items.length ? items.length - 1 : 0, !lastItemsCount);
+					activate(rel.activeItem >= items.length ? items.length - 1 : 0, { 'force': !lastItemsCount, 'source': 'load' });
 				}
 				// Fix possible overflowing
 				var activeItem = items[rel.activeItem];
@@ -375,7 +375,7 @@
 						newPos = items[tempRel.centerItem].center;
 					}
 					if (forceCenteredNav && o.activateMiddle) {
-						activate(tempRel.centerItem);
+						activate(tempRel.centerItem, { 'source': 'slideTo' });
 					}
 				} else if (isNotBordering) {
 					newPos = items[tempRel.firstItem].start;
@@ -622,7 +622,7 @@
 		 * @return {Void}
 		 */
 		self.prev = function () {
-			self.activate(rel.activeItem - 1);
+			self.activate(rel.activeItem - 1, { 'source': 'self.prev' });
 		};
 
 		/**
@@ -631,7 +631,7 @@
 		 * @return {Void}
 		 */
 		self.next = function () {
-			self.activate(rel.activeItem + 1);
+			self.activate(rel.activeItem + 1, { 'source': 'self.next' });
 		};
 
 		/**
@@ -785,16 +785,22 @@
 		/**
 		 * Activates an item.
 		 *
-		 * @param  {Mixed} item Item DOM element, or index starting at 0.
+		 * @param  {Mixed} item   Item DOM element, or index starting at 0.
+		 * @param  {Bool}  force  Force activation of item.
+		 * @param  {Mixed} source  Arbitrary string or object value of where the activate call came from.
 		 *
 		 * @return {Mixed} Activated item index or false on fail.
 		 */
-		function activate(item, force) {
+		function activate(item, activate_options) {
 			var index = getIndex(item);
 
 			if (!itemNav || index < 0) {
 				return false;
 			}
+			
+			var activate_options = activate_options || { 'force': undefined, 'source': undefined }; // Yes, I know {} is essentially the same.
+			var force            = activate_options.force;
+			var source           = activate_options.source;
 
 			// Update classes, last active index, and trigger active event only when there
 			// has been a change. Otherwise just return the current active index.
@@ -806,7 +812,7 @@
 				last.active = rel.activeItem = index;
 
 				updateButtonsState();
-				trigger('active', index);
+				trigger('active', index, force, source);
 			}
 
 			return index;
@@ -817,14 +823,24 @@
 		 *
 		 * @param {Mixed} item      Item DOM element, or index starting at 0.
 		 * @param {Bool}  immediate Whether to reposition immediately in smart navigation.
+		 * @param {Mixed} source    Arbitrary string or object value of where the activate call came from.
 		 *
 		 * @return {Void}
 		 */
-		self.activate = function (item, immediate) {
-			var index = activate(item);
+		self.activate = function (item, activate_options) {
+			if (typeof activate_options === 'boolean') {
+				var activate_options = {
+					'immediate': activate_options,
+					'source':  (arguments.length >= 3) ? arguments[2] : undefined
+				};
+			} else {
+				var activate_options = activate_options || { 'immediate': undefined, ' source': undefined };
+			}
+			var index = activate(item, activate_options);
 
 			// Smart navigation
 			if (o.smart && index !== false) {
+				var immediate = activate_options.immedate;
 				// When centeredNav is enabled, center the element.
 				// Otherwise, determine where to position the element based on its current position.
 				// If the element is currently on the far end side of the frame, assume that user is
@@ -1017,7 +1033,7 @@
 				trigger('cycle');
 				switch (o.cycleBy) {
 					case 'items':
-						self.activate(rel.activeItem >= items.length - 1 ? 0 : rel.activeItem + 1);
+						self.activate(rel.activeItem >= items.length - 1 ? 0 : rel.activeItem + 1, { 'source': 'self.resume' });
 						break;
 
 					case 'pages':
@@ -1133,7 +1149,7 @@
 					// Activate new item at the removed position
 					if (reactivate) {
 						last.active = null;
-						self.activate(rel.activeItem);
+						self.activate(rel.activeItem, { 'source': 'self.remove' });
 					}
 				}
 			} else {
@@ -1653,7 +1669,7 @@
 			}
 			// Accept only events from direct SLIDEE children.
 			if (this.parentNode === $slidee[0]) {
-				self.activate(this);
+				self.activate(this, { 'source': 'activateHandler', 'data': event });
 			}
 		}
 
@@ -1704,7 +1720,7 @@
 				}
 				// Execute the callbacks
 				for (i = 0; i < l; i++) {
-					tmpArray[i].call(self, name, arg1);
+					tmpArray[i].apply(self, arguments);
 				}
 			}
 		}
